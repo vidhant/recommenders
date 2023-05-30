@@ -199,13 +199,17 @@ class Retrieval(tf.keras.layers.Layer, base.Task):
                 query_embeddings,
                 # Slice to the size of query embeddings
                 # if `candidate_embeddings` contains extra negatives.
-                candidate_embeddings[:tf.shape(query_embeddings)[0]],
-                true_candidate_ids=candidate_ids)
+                candidate_embeddings[: tf.shape(query_embeddings)[0]],
+                true_candidate_ids=candidate_ids,
+                sample_weight=sample_weight,
+            )
         )
 
     if compute_batch_metrics:
       for metric in self._batch_metrics:
-        update_ops.append(metric.update_state(labels, scores))
+        update_ops.append(
+            metric.update_state(labels, scores, sample_weight=sample_weight)
+        )
 
     with tf.control_dependencies(update_ops):
       return tf.identity(loss)
