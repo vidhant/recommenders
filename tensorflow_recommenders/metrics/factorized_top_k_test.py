@@ -33,10 +33,12 @@ class FactorizedTopKTest(tf.test.TestCase, parameterized.TestCase):
           (layers.factorized_top_k.Streaming,
            layers.factorized_top_k.BruteForce,
            None),
+          (True, False),
           (True, False)
       )
   )
-  def test_factorized_top_k(self, top_k_layer, use_candidate_ids):
+  def test_factorized_top_k(self, top_k_layer, use_sample_weight,
+                            use_candidate_ids):
 
     rng = np.random.RandomState(42)
 
@@ -65,7 +67,8 @@ class FactorizedTopKTest(tf.test.TestCase, parameterized.TestCase):
 
     metric = metrics.FactorizedTopK(
         candidates=candidates,
-        ks=ks
+        ks=ks,
+        use_sample_weight=use_sample_weight,
     )
     metric.update_state(
         query_embeddings=query,
@@ -79,9 +82,10 @@ class FactorizedTopKTest(tf.test.TestCase, parameterized.TestCase):
           targets=true_candidate_indexes,
           predictions=candidate_scores,
           k=k)
+      weights = np.squeeze(sample_weight, 1) if use_sample_weight else None
       expected_val = np.average(
           in_top_k.numpy().astype(np.float32),
-          weights=np.squeeze(sample_weight, 1),
+          weights=weights,
       )
       self.assertAllClose(metric_value, expected_val)
 

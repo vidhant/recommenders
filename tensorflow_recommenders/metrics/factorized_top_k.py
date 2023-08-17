@@ -32,7 +32,8 @@ class Factorized(tf.keras.layers.Layer, abc.ABC):
       self,
       query_embeddings: tf.Tensor,
       true_candidate_embeddings: tf.Tensor,
-      true_candidate_ids: Optional[tf.Tensor] = None
+      true_candidate_ids: Optional[tf.Tensor] = None,
+      sample_weight: Optional[tf.Tensor] = None,
   ) -> tf.Operation:
 
     raise NotImplementedError()
@@ -60,6 +61,7 @@ class FactorizedTopK(Factorized):
       self,
       candidates: Union[layers.factorized_top_k.TopK, tf.data.Dataset],
       ks: Sequence[int] = (1, 5, 10, 50, 100),
+      use_sample_weight: bool = False,
       name: str = "factorized_top_k",
   ) -> None:
     """Initializes the metric.
@@ -69,6 +71,8 @@ class FactorizedTopK(Factorized):
         to a query, or a dataset of candidate embeddings from which
         candidates should be retrieved.
       ks: A sequence of values of `k` at which to perform retrieval evaluation.
+      use_sample_weight: A boolean to determine whether to use sample weight in
+        metric calculation.
       name: Optional name.
     """
 
@@ -82,6 +86,7 @@ class FactorizedTopK(Factorized):
 
     self._ks = ks
     self._candidates = candidates
+    self._use_sample_weight = use_sample_weight
     self._top_k_metrics = [
         tf.keras.metrics.Mean(
             name=f"{self.name}/top_{x}_categorical_accuracy"
@@ -135,6 +140,9 @@ class FactorizedTopK(Factorized):
 
     top_k_predictions, retrieved_ids = self._candidates(
         query_embeddings, k=max(self._ks))
+
+    if not self._use_sample_weight:
+      sample_weight = None
 
     update_ops = []
 
